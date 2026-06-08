@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useEffect, useState, type ReactNode } from 'react';
-import { supabase } from '../integrations/supabase/client';
 
 export const Route = createFileRoute('/dashboard/')({
   head: () => ({
@@ -19,11 +18,12 @@ export const Route = createFileRoute('/dashboard/')({
 function DashboardHome() {
   const [stats, setStats] = useState({ sites: 0, posts: 0 });
   const [loading, setLoading] = useState(true);
-  const db = supabase as any;
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      const { supabase } = await import('../integrations/supabase/client');
+      const db = supabase as any;
       const [sites, posts] = await Promise.all([
         db.from('sites').select('id', { count: 'exact', head: true }),
         db.from('generated_blog_posts').select('id', { count: 'exact', head: true }),
