@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '../integrations/supabase/client';
 
 interface Site {
   id: string;
@@ -32,10 +31,11 @@ function SitesPage() {
   const [url, setUrl] = useState('');
   const [search, setSearch] = useState('');
   const [busy, setBusy] = useState(false);
-  const db = supabase as any;
 
   const load = async () => {
     setLoading(true);
+    const { supabase } = await import('../integrations/supabase/client');
+    const db = supabase as any;
     const { data, error } = await db
       .from('sites')
       .select('*')
@@ -65,6 +65,8 @@ function SitesPage() {
     try { new URL(normalized); } catch { toast.error('Invalid URL'); return; }
 
     setBusy(true);
+    const { supabase } = await import('../integrations/supabase/client');
+    const db = supabase as any;
     const { data: userResp } = await supabase.auth.getUser();
     const userId = userResp.user?.id;
     if (!userId) { toast.error('Not authenticated'); setBusy(false); return; }
@@ -79,6 +81,8 @@ function SitesPage() {
 
   const onDelete = async (id: string) => {
     if (!confirm('Delete this site?')) return;
+    const { supabase } = await import('../integrations/supabase/client');
+    const db = supabase as any;
     const { error } = await db.from('sites').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     toast.success('Deleted'); load();
