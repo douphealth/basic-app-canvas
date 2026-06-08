@@ -121,6 +121,27 @@ async function resolveSerpKey(config: Partial<AppConfig>): Promise<string> {
   return (await decodeStoredSecret(config.serpApiKey)).trim();
 }
 
+/**
+ * Decrypt stored WordPress credentials. Persisted values may be `v3:...`
+ * AES-GCM ciphertext; sending those verbatim to WP makes it return 401
+ * "rest_cannot_edit" because the Basic auth header decodes to garbage.
+ */
+export async function resolveWpCreds(config: Partial<AppConfig>): Promise<{
+  user: string;
+  appPassword: string;
+}> {
+  const [user, appPassword] = await Promise.all([
+    decodeStoredSecret(config.wpUser),
+    decodeStoredSecret(config.wpAppPassword),
+  ]);
+  return { user: user.trim(), appPassword: appPassword.trim() };
+}
+
+async function wpBasicAuth(config: Partial<AppConfig>): Promise<string> {
+  const { user, appPassword } = await resolveWpCreds(config);
+  return btoa(`${user}:${appPassword}`);
+}
+
 /** Provider-aware ASIN lookup. PA-API first when available. */
 export async function lookupAsin(
   asin: string,
