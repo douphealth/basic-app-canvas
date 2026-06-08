@@ -92,6 +92,35 @@ function paapiToFullProduct(asin: string, mapped: any): ProductDetails {
   };
 }
 
+/**
+ * Decrypts stored secrets so the raw AWS/SerpAPI credentials are sent
+ * downstream. Persisted config stores values like `v3:...` (AES-GCM) and
+ * passing those through verbatim makes PA-API reject the request with
+ * "IncompleteSignature".
+ */
+async function resolveAmazonCreds(config: Partial<AppConfig>): Promise<{
+  accessKey: string;
+  secretKey: string;
+  partnerTag: string;
+  region: string;
+}> {
+  const [accessKey, secretKey, partnerTag] = await Promise.all([
+    decodeStoredSecret(config.amazonAccessKey),
+    decodeStoredSecret(config.amazonSecretKey),
+    decodeStoredSecret(config.amazonTag),
+  ]);
+  return {
+    accessKey: accessKey.trim(),
+    secretKey: secretKey.trim(),
+    partnerTag: partnerTag.trim(),
+    region: config.amazonRegion || 'us-east-1',
+  };
+}
+
+async function resolveSerpKey(config: Partial<AppConfig>): Promise<string> {
+  return (await decodeStoredSecret(config.serpApiKey)).trim();
+}
+
 /** Provider-aware ASIN lookup. PA-API first when available. */
 export async function lookupAsin(
   asin: string,
@@ -105,14 +134,9 @@ export async function lookupAsin(
     try {
       const cached = IntelligenceCache.getProduct(normalized);
       if (cached) return cached;
+      const creds = await resolveAmazonCreds(config);
       const res = await paapiGetItem({
-        data: {
-          asin: normalized,
-          accessKey: config.amazonAccessKey!,
-          secretKey: config.amazonSecretKey!,
-          partnerTag: config.amazonTag!,
-          region: config.amazonRegion || 'us-east-1',
-        },
+        data: { asin: normalized, ...creds },
       });
       if (res?.product) {
         const product = paapiToFullProduct(normalized, res.product);
@@ -126,7 +150,8 @@ export async function lookupAsin(
   }
 
   if (hasSerpApi(config)) {
-    return fetchProductByASIN(normalized, config.serpApiKey!, tracker);
+    const serpKey = await resolveSerpKey(config);
+    return fetchProductByASIN(normalized, serpKey, tracker);
   }
   throw new Error(missingProductLookupMessage(config));
 }
@@ -142,14 +167,9 @@ export async function lookupAmazonSearch(
 
   if (hasPaapiCreds(config)) {
     try {
+      const creds = await resolveAmazonCreds(config);
       const res = await paapiSearchItem({
-        data: {
-          keyword: q,
-          accessKey: config.amazonAccessKey!,
-          secretKey: config.amazonSecretKey!,
-          partnerTag: config.amazonTag!,
-          region: config.amazonRegion || 'us-east-1',
-        },
+        data: { keyword: q, ...creds },
       });
       if (res?.product) {
         return {
@@ -170,7 +190,8 @@ export async function lookupAmazonSearch(
   }
 
   if (hasSerpApi(config)) {
-    return searchAmazonProduct(q, config.serpApiKey!, tracker);
+    const serpKey = await resolveSerpKey(config);
+    return searchAmazonProduct(q, serpKey, tracker);
   }
   throw new Error(missingProductLookupMessage(config));
 }
