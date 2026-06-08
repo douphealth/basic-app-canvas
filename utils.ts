@@ -1685,7 +1685,7 @@ export const pushToWordPress = async (
   }
 
   const apiUrl = `${getWordPressApiBaseUrl(config.wpUrl)}/posts/${postId}`;
-  const auth = btoa(`${config.wpUser}:${config.wpAppPassword}`);
+  const auth = await wpBasicAuth(config);
 
   // Retry transient WP errors (overloaded shared hosts often return 502/503/504).
   // Auth/validation failures (4xx other than 408/425/429) fail fast.
