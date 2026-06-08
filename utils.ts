@@ -32,10 +32,14 @@ import {
   BoxStyle
 } from './types';
 import { deduplicateRequest } from './lib/request-dedup';
-import { supabase } from './src/integrations/supabase/client';
 import { withRetry } from './lib/retry';
 import { fetchWordPressPostContent } from './src/lib/wordpress.functions';
 import { paapiGetItem, paapiSearchItem } from './src/lib/paapi.functions';
+
+async function loadSupabaseClient() {
+  const { supabase } = await import('./src/integrations/supabase/client');
+  return supabase;
+}
 
 // ============================================================================
 // PRODUCT LOOKUP DISPATCHER
@@ -3357,6 +3361,7 @@ const callSerpApiProxy = async (params: {
 
   for (let attempt = 0; attempt < SERPAPI_MAX_ATTEMPTS; attempt++) {
     try {
+      const supabase = await loadSupabaseClient();
       const { data, error } = await supabase.functions.invoke('serpapi-proxy', {
         body: {
           type: params.type,
