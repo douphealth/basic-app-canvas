@@ -22,7 +22,7 @@ const SAFE_CONFIG = {
   // Belt-and-suspenders: if a disallowed tag ever slips through, drop its
   // text content too instead of dumping raw CSS/JS into the document.
   FORBID_TAGS: ['script'],
-  FORBID_CONTENTS: ['script', 'style'],
+  FORBID_CONTENTS: ['script'],
   RETURN_TRUSTED_TYPE: false,
 };
 
