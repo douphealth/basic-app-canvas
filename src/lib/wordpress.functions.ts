@@ -145,6 +145,13 @@ const fetchJson = async <T>(url: string, authHeader: string | null) => {
   return (await response.json()) as T;
 };
 
+const withEditContext = (url: string, authHeader: string | null) => {
+  if (!authHeader) return url;
+  const next = new URL(url);
+  next.searchParams.set('context', 'edit');
+  return next.toString();
+};
+
 const tryFetchFromApi = async (
   apiBase: string,
   postId: number,
@@ -161,13 +168,13 @@ const tryFetchFromApi = async (
   );
 
   for (const id of idsToTry) {
-    const post = await fetchJson<WordPressEntity>(`${apiBase}/posts/${id}`, authHeader);
+    const post = await fetchJson<WordPressEntity>(withEditContext(`${apiBase}/posts/${id}`, authHeader), authHeader);
     const postContent = normalizeContent(post);
     if (postContent.length > 50) {
       return { content: postContent, resolvedId: post?.id ?? id, source: 'wordpress-api' };
     }
 
-    const page = await fetchJson<WordPressEntity>(`${apiBase}/pages/${id}`, authHeader);
+    const page = await fetchJson<WordPressEntity>(withEditContext(`${apiBase}/pages/${id}`, authHeader), authHeader);
     const pageContent = normalizeContent(page);
     if (pageContent.length > 50) {
       return { content: pageContent, resolvedId: page?.id ?? id, source: 'wordpress-api' };
@@ -176,7 +183,7 @@ const tryFetchFromApi = async (
 
   if (!slug) return null;
 
-  const posts = await fetchJson<WordPressEntity[]>(`${apiBase}/posts?slug=${encodeURIComponent(slug)}`, authHeader);
+  const posts = await fetchJson<WordPressEntity[]>(withEditContext(`${apiBase}/posts?slug=${encodeURIComponent(slug)}`, authHeader), authHeader);
   const matchedPost = Array.isArray(posts) ? posts.find((item) => normalizeContent(item).length > 50) : null;
   if (matchedPost) {
     return {
@@ -186,7 +193,7 @@ const tryFetchFromApi = async (
     };
   }
 
-  const pages = await fetchJson<WordPressEntity[]>(`${apiBase}/pages?slug=${encodeURIComponent(slug)}`, authHeader);
+  const pages = await fetchJson<WordPressEntity[]>(withEditContext(`${apiBase}/pages?slug=${encodeURIComponent(slug)}`, authHeader), authHeader);
   const matchedPage = Array.isArray(pages) ? pages.find((item) => normalizeContent(item).length > 50) : null;
   if (matchedPage) {
     return {
