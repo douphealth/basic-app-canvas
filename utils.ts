@@ -1157,7 +1157,7 @@ const fetchAllPostsViaWordPressAPI = async (config: AppConfig): Promise<BlogPost
   }
 
   const apiBase = getWordPressApiBaseUrl(config.wpUrl);
-  const auth = btoa(`${config.wpUser}:${config.wpAppPassword}`);
+  const auth = await wpBasicAuth(config);
   const allPosts: BlogPost[] = [];
   let page = 1;
   const perPage = 100;
