@@ -11,7 +11,7 @@ type WordPressFetchInput = {
 type FetchedPost = {
   content: string;
   resolvedId: number;
-  source: 'wordpress-api' | 'html-fallback';
+  source: 'wordpress-api';
 };
 
 type WordPressEntity = {
@@ -199,28 +199,6 @@ const tryFetchFromApi = async (
   return null;
 };
 
-const fetchHtmlFallback = async (postUrl: string, resolvedId: number): Promise<FetchedPost> => {
-  const response = await fetchWithTimeout(postUrl, REQUEST_TIMEOUT_MS, {
-    headers: {
-      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'User-Agent': 'Mozilla/5.0 (compatible; AmzWP-Importer/1.0)',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`live page responded with ${response.status}`);
-  }
-
-  const html = await response.text();
-  const content = extractMainContent(html);
-
-  if (content.length <= 50) {
-    throw new Error('live page returned too little article content');
-  }
-
-  return { content, resolvedId, source: 'html-fallback' };
-};
-
 export const fetchWordPressPostContent = createServerFn({ method: 'POST' })
   .inputValidator((input: WordPressFetchInput) => ({
     postId: Number(input?.postId ?? 0),
@@ -246,14 +224,6 @@ export const fetchWordPressPostContent = createServerFn({ method: 'POST' })
       }
     }
 
-    if (postUrl) {
-      try {
-        return await fetchHtmlFallback(postUrl, urlPostId ?? postId);
-      } catch (error: any) {
-        errors.push(`html fallback: ${error?.message || 'page fetch failed'}`);
-      }
-    }
-
     const detail = errors.length > 0 ? ` (${errors.slice(0, 2).join(' | ')})` : '';
-    throw new Error(`Could not load this post from WordPress or the live page${detail}`);
+    throw new Error(`Could not load editable post content from WordPress${detail}`);
   });
