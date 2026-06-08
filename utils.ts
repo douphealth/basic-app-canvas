@@ -1610,7 +1610,7 @@ const fetchViaWordPressAPI = async (
     if (!slug) return null;
 
     const apiBase = getWordPressApiBaseUrl(config.wpUrl);
-    const auth = btoa(`${config.wpUser}:${config.wpAppPassword}`);
+    const auth = await wpBasicAuth(config);
 
     // Try posts first
     let response = await fetchWithTimeout(
