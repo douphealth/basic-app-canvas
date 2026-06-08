@@ -121,6 +121,27 @@ async function resolveSerpKey(config: Partial<AppConfig>): Promise<string> {
   return (await decodeStoredSecret(config.serpApiKey)).trim();
 }
 
+/**
+ * Decrypt stored WordPress credentials. Persisted values may be `v3:...`
+ * AES-GCM ciphertext; sending those verbatim to WP makes it return 401
+ * "rest_cannot_edit" because the Basic auth header decodes to garbage.
+ */
+export async function resolveWpCreds(config: Partial<AppConfig>): Promise<{
+  user: string;
+  appPassword: string;
+}> {
+  const [user, appPassword] = await Promise.all([
+    decodeStoredSecret(config.wpUser),
+    decodeStoredSecret(config.wpAppPassword),
+  ]);
+  return { user: user.trim(), appPassword: appPassword.trim() };
+}
+
+async function wpBasicAuth(config: Partial<AppConfig>): Promise<string> {
+  const { user, appPassword } = await resolveWpCreds(config);
+  return btoa(`${user}:${appPassword}`);
+}
+
 /** Provider-aware ASIN lookup. PA-API first when available. */
 export async function lookupAsin(
   asin: string,
@@ -1136,7 +1157,7 @@ const fetchAllPostsViaWordPressAPI = async (config: AppConfig): Promise<BlogPost
   }
 
   const apiBase = getWordPressApiBaseUrl(config.wpUrl);
-  const auth = btoa(`${config.wpUser}:${config.wpAppPassword}`);
+  const auth = await wpBasicAuth(config);
   const allPosts: BlogPost[] = [];
   let page = 1;
   const perPage = 100;
@@ -1589,7 +1610,7 @@ const fetchViaWordPressAPI = async (
     if (!slug) return null;
 
     const apiBase = getWordPressApiBaseUrl(config.wpUrl);
-    const auth = btoa(`${config.wpUser}:${config.wpAppPassword}`);
+    const auth = await wpBasicAuth(config);
 
     // Try posts first
     let response = await fetchWithTimeout(
@@ -1634,13 +1655,14 @@ export const fetchRawPostContent = async (
   postId: number,
   postUrl: string
 ): Promise<{ content: string; resolvedId: number }> => {
+  const { user, appPassword } = await resolveWpCreds(config);
   const result = await fetchWordPressPostContent({
     data: {
       postId,
       postUrl,
       wpUrl: config.wpUrl,
-      wpUser: config.wpUser,
-      wpAppPassword: config.wpAppPassword,
+      wpUser: user,
+      wpAppPassword: appPassword,
     },
   });
 
@@ -1663,7 +1685,7 @@ export const pushToWordPress = async (
   }
 
   const apiUrl = `${getWordPressApiBaseUrl(config.wpUrl)}/posts/${postId}`;
-  const auth = btoa(`${config.wpUser}:${config.wpAppPassword}`);
+  const auth = await wpBasicAuth(config);
 
   // Retry transient WP errors (overloaded shared hosts often return 502/503/504).
   // Auth/validation failures (4xx other than 408/425/429) fail fast.
@@ -1725,7 +1747,7 @@ export const testConnection = async (
     const baseUrl = getWordPressSiteBaseUrl(config.wpUrl);
     const apiUrl = `${getWordPressApiBaseUrl(config.wpUrl)}/users/me`;
 
-    const auth = btoa(`${config.wpUser}:${config.wpAppPassword}`);
+    const auth = await wpBasicAuth(config);
 
     const response = await fetchWithTimeout(
       apiUrl,
@@ -4499,7 +4521,7 @@ export const fetchPostsFromWordPressAPI = async (
 
   const headers: Record<string, string> = {};
   if (config.wpUser && config.wpAppPassword) {
-    const auth = btoa(`${config.wpUser}:${config.wpAppPassword}`);
+    const auth = await wpBasicAuth(config);
     headers['Authorization'] = `Basic ${auth}`;
   }
 
