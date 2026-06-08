@@ -4521,7 +4521,7 @@ export const fetchPostsFromWordPressAPI = async (
 
   const headers: Record<string, string> = {};
   if (config.wpUser && config.wpAppPassword) {
-    const auth = btoa(`${config.wpUser}:${config.wpAppPassword}`);
+    const auth = await wpBasicAuth(config);
     headers['Authorization'] = `Basic ${auth}`;
   }
 
