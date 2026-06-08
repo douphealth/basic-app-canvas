@@ -7,14 +7,22 @@ const SAFE_CONFIG = {
     'img', 'figure', 'figcaption', 'table', 'thead', 'tbody', 'tr',
     'th', 'td', 'div', 'span', 'section', 'article', 'aside', 'header',
     'footer', 'nav', 'sup', 'sub', 'hr', 'dl', 'dt', 'dd',
+    // Preserve <style> blocks so embedded CSS (e.g. .gutf-* layout styles)
+    // round-trips into WordPress instead of being unwrapped into raw text.
+    'style', 'iframe',
   ],
   ALLOWED_ATTR: [
     'href', 'src', 'alt', 'title', 'class', 'id', 'style', 'target',
     'rel', 'width', 'height', 'loading', 'decoding', 'colspan', 'rowspan',
-    'scope',
+    'scope', 'type', 'media', 'allow', 'allowfullscreen', 'frameborder',
+    'referrerpolicy', 'srcset', 'sizes',
   ],
   ALLOW_DATA_ATTR: true,
   ADD_ATTR: ['target'],
+  // Belt-and-suspenders: if a disallowed tag ever slips through, drop its
+  // text content too instead of dumping raw CSS/JS into the document.
+  FORBID_TAGS: ['script'],
+  FORBID_CONTENTS: ['script'],
   RETURN_TRUSTED_TYPE: false,
 };
 
