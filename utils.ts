@@ -3779,6 +3779,21 @@ export const fetchProductByASIN = async (
 export const splitContentIntoBlocks = (html: string): string[] => {
   if (!html || html.trim().length === 0) return [];
 
+  if (typeof window !== 'undefined' && typeof DOMParser !== 'undefined') {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const blocks = Array.from(doc.body.childNodes)
+      .map((node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = node.textContent?.trim() || '';
+          return text ? `<p>${text}</p>` : '';
+        }
+        return (node as HTMLElement).outerHTML || node.textContent || '';
+      })
+      .filter((block) => block.trim().length > 0);
+
+    if (blocks.length > 0) return blocks;
+  }
+
   // Block-level elements to split on
   const blockEndTags = [
     '</p>', '</h1>', '</h2>', '</h3>', '</h4>', '</h5>', '</h6>',
