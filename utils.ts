@@ -1655,13 +1655,14 @@ export const fetchRawPostContent = async (
   postId: number,
   postUrl: string
 ): Promise<{ content: string; resolvedId: number }> => {
+  const { user, appPassword } = await resolveWpCreds(config);
   const result = await fetchWordPressPostContent({
     data: {
       postId,
       postUrl,
       wpUrl: config.wpUrl,
-      wpUser: config.wpUser,
-      wpAppPassword: config.wpAppPassword,
+      wpUser: user,
+      wpAppPassword: appPassword,
     },
   });
 
