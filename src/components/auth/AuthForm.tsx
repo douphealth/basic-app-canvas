@@ -2,7 +2,6 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { Link } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { useAuth } from '../../lib/auth';
-import { lovable } from '../../integrations/lovable';
 
 interface Props {
   mode: 'signin' | 'signup';
@@ -58,6 +57,7 @@ export function AuthForm({ mode, redirectTo }: Props) {
     if (busy) return;
     setBusy(true);
     try {
+      const { lovable } = await import('../../integrations/lovable');
       const result = await lovable.auth.signInWithOAuth('google', {
         redirect_uri: `${window.location.origin}${safeRedirect}`,
       });
