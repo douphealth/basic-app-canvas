@@ -85,6 +85,34 @@ export function sanitizeHtml(dirty: string): string {
   return purifier.sanitize(cleaned, SAFE_CONFIG) as string;
 }
 
+export function preserveHtmlStructure(dirty: string): string {
+  if (!dirty) return '';
+
+  const withoutScripts = dirty.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
+
+  if (typeof window === 'undefined' || typeof DOMParser === 'undefined') {
+    return withoutScripts;
+  }
+
+  try {
+    const doc = new DOMParser().parseFromString(withoutScripts, 'text/html');
+    doc.querySelectorAll('script').forEach((node) => node.remove());
+
+    doc.querySelectorAll('[href],[src]').forEach((node) => {
+      for (const attr of ['href', 'src'] as const) {
+        const value = node.getAttribute(attr);
+        if (value && /^\s*javascript:/i.test(value)) {
+          node.removeAttribute(attr);
+        }
+      }
+    });
+
+    return doc.body.innerHTML;
+  } catch {
+    return withoutScripts;
+  }
+}
+
 export function sanitizePlainText(dirty: string): string {
   if (!dirty) return '';
   const purifier = getSanitizer();
