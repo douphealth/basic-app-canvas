@@ -714,15 +714,40 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
             ));
       }
 
-      // 3. Merge results into product map
+      // 3. Merge results into product map — dedupe by ASIN (or normalized title
+      //    when no ASIN is present) so re-running the scan never inserts the
+      //    same product under a fresh ID.
       if (products.length > 0) {
         const newMap = { ...productMap };
-        products.forEach((p) => (newMap[p.id] = p));
+        const keyOf = (p: ProductDetails) =>
+          (p.asin ? `asin:${p.asin.toUpperCase()}` : `title:${(p.title || '').trim().toLowerCase()}`);
+        const existingByKey = new Map<string, string>();
+        Object.values(newMap).forEach((p) => existingByKey.set(keyOf(p), p.id));
+
+        let added = 0;
+        let merged = 0;
+        products.forEach((p) => {
+          const k = keyOf(p);
+          const existingId = existingByKey.get(k);
+          if (existingId) {
+            // Refresh metadata on the existing ID — keep the same node binding.
+            newMap[existingId] = { ...newMap[existingId], ...p, id: existingId };
+            merged++;
+          } else {
+            newMap[p.id] = p;
+            existingByKey.set(k, p.id);
+            added++;
+          }
+        });
         setProductMap(newMap);
 
-        const label = candidateCount > products.length
-          ? `${products.length} products verified (from ${candidateCount} candidates)`
-          : `${products.length} products found`;
+        const label = added === 0
+          ? `${merged} product${merged === 1 ? '' : 's'} refreshed (no new matches)`
+          : merged > 0
+            ? `${added} new, ${merged} refreshed (from ${candidateCount} candidates)`
+            : candidateCount > added
+              ? `${added} products verified (from ${candidateCount} candidates)`
+              : `${added} products found`;
         toast(`Precision Scan: ${label}`, { style: { background: '#0ea5e9' }, duration: 4000 });
       } else {
         const contentLen = currentHtml.replace(/<[^>]+>/g, '').trim().length;
