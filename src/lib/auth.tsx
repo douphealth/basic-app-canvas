@@ -6,7 +6,6 @@ import {
   type ReactNode,
 } from 'react';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
-import { supabase } from '../integrations/supabase/client';
 
 interface AuthState {
   user: User | null;
@@ -19,6 +18,15 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
+function toError(error: unknown) {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+async function loadSupabase() {
+  const { supabase } = await import('../integrations/supabase/client');
+  return supabase;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -30,52 +38,82 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // CRITICAL: subscribe FIRST, then load existing session.
-    const { data: sub } = supabase.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, s: Session | null) => {
-        syncSession(s);
-        setLoading(false);
-      }
-    );
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
 
-    supabase.auth
-      .getSession()
-      .then(({ data }: { data: { session: Session | null } }) => {
+    (async () => {
+      try {
+        const supabase = await loadSupabase();
+        if (!active) return;
+
+        const { data: sub } = supabase.auth.onAuthStateChange(
+          (_event: AuthChangeEvent, s: Session | null) => {
+            if (!active) return;
+            syncSession(s);
+            setLoading(false);
+          }
+        );
+
+        unsubscribe = () => sub.subscription.unsubscribe();
+
+        const { data }: { data: { session: Session | null } } = await supabase.auth.getSession();
+        if (!active) return;
         syncSession(data.session);
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error(error);
+        if (!active) return;
         syncSession(null);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    })();
 
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (data.session) syncSession(data.session);
-    return { error, session: data.session ?? null };
+    try {
+      const supabase = await loadSupabase();
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (data.session) syncSession(data.session);
+      return { error, session: data.session ?? null };
+    } catch (error) {
+      return { error: toError(error), session: null };
+    }
   };
 
   const signUp = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo:
-          typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : undefined,
-      },
-    });
-    if (data.session) syncSession(data.session);
-    return { error, session: data.session ?? null };
+    try {
+      const supabase = await loadSupabase();
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo:
+            typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : undefined,
+        },
+      });
+      if (data.session) syncSession(data.session);
+      return { error, session: data.session ?? null };
+    } catch (error) {
+      return { error: toError(error), session: null };
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    syncSession(null);
+    try {
+      const supabase = await loadSupabase();
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      syncSession(null);
+    }
   };
 
   return (
