@@ -266,6 +266,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
   const autoSaveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSaveRef = useRef<number>(0);
   const relevanceCache = useRef<Map<string, number>>(new Map());
+  const editedHtmlNodesRef = useRef<Set<string>>(new Set());
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // ========================================================================
@@ -1350,8 +1351,13 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
       className="prose prose-xl prose-slate max-w-none focus:outline-none focus:ring-2 focus:ring-brand-100 rounded-xl p-2 transition-all"
       contentEditable
       suppressContentEditableWarning
+      onInput={() => { editedHtmlNodesRef.current.add(node.id); }}
       onPaste={(e) => handleEditableBlockPaste(e, index)}
-      onBlur={(e) => updateHtmlNode(node.id, preserveHtmlStructure(e.currentTarget.innerHTML))}
+      onBlur={(e) => {
+        if (!editedHtmlNodesRef.current.has(node.id)) return;
+        editedHtmlNodesRef.current.delete(node.id);
+        updateHtmlNode(node.id, preserveHtmlStructure(e.currentTarget.innerHTML));
+      }}
       dangerouslySetInnerHTML={{ __html: preserveHtmlStructure(node.content || '') }}
     />
   ) : node.type === 'COMPARISON' && node.comparisonData ? (
