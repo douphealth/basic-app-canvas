@@ -1747,7 +1747,7 @@ export const testConnection = async (
     const baseUrl = getWordPressSiteBaseUrl(config.wpUrl);
     const apiUrl = `${getWordPressApiBaseUrl(config.wpUrl)}/users/me`;
 
-    const auth = btoa(`${config.wpUser}:${config.wpAppPassword}`);
+    const auth = await wpBasicAuth(config);
 
     const response = await fetchWithTimeout(
       apiUrl,
