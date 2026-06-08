@@ -59,7 +59,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import { toast } from 'sonner';
-import { sanitizeHtml } from '../lib/sanitize';
+import { preserveHtmlStructure, sanitizeHtml } from '../lib/sanitize';
 import { verifyAsin } from '@/src/lib/amazon.functions';
 
 // ============================================================================
@@ -995,7 +995,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
   const generateFinalHtml = useCallback((): string => {
     const body = editorNodes
       .map((node) => {
-        if (node.type === 'HTML') return sanitizeHtml(node.content || '');
+        if (node.type === 'HTML') return preserveHtmlStructure(node.content || '');
         if (node.type === 'PRODUCT' && node.productId && productMap[node.productId]) {
           return generateProductBoxHtml(
             productMap[node.productId],
@@ -1351,8 +1351,8 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
       contentEditable
       suppressContentEditableWarning
       onPaste={(e) => handleEditableBlockPaste(e, index)}
-      onBlur={(e) => updateHtmlNode(node.id, sanitizeHtml(e.currentTarget.innerHTML))}
-      dangerouslySetInnerHTML={{ __html: sanitizeHtml(node.content || '') }}
+      onBlur={(e) => updateHtmlNode(node.id, preserveHtmlStructure(e.currentTarget.innerHTML))}
+      dangerouslySetInnerHTML={{ __html: preserveHtmlStructure(node.content || '') }}
     />
   ) : node.type === 'COMPARISON' && node.comparisonData ? (
     <ComparisonTablePreview
