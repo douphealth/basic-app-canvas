@@ -25,11 +25,9 @@ export default defineConfig(({ mode }) => ({
     allowedHosts: true,
   },
   ssr: {
-    noExternal: [
-      'h3-v2',
-      '@tanstack/start-server-core',
-      '@tanstack/react-start',
-      '@tanstack/react-start-server',
-    ],
+    // Bundle ALL dependencies into the worker build. Partial lists break
+    // production: e.g. bundling 'h3-v2' while leaving its dep 'rou3'
+    // external produced "No such module assets/rou3" crashes on deploy.
+    noExternal: true,
   },
 }));
