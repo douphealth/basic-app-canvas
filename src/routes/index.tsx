@@ -1,9 +1,14 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../lib/auth';
-import { PremiumProductBox } from '../../components/PremiumProductBox';
 import type { ProductDetails } from '../../types';
 import ogCover from '../assets/og-cover.jpg';
+
+const PremiumProductBox = lazy(() =>
+  import('../../components/PremiumProductBox').then((module) => ({
+    default: module.PremiumProductBox,
+  }))
+);
 
 const SITE_URL = 'https://basic-app-canvas.lovable.app';
 
