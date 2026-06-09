@@ -1,9 +1,14 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../lib/auth';
-import { PremiumProductBox } from '../../components/PremiumProductBox';
 import type { ProductDetails } from '../../types';
 import ogCover from '../assets/og-cover.jpg';
+
+const PremiumProductBox = lazy(() =>
+  import('../../components/PremiumProductBox').then((module) => ({
+    default: module.PremiumProductBox,
+  }))
+);
 
 const SITE_URL = 'https://basic-app-canvas.lovable.app';
 
@@ -435,7 +440,9 @@ function DemoSection() {
 
         <div className="bg-gradient-to-br from-dark-900 to-dark-950 rounded-3xl border border-dark-800 p-4 md:p-8 shadow-2xl shadow-brand-500/5">
           <div className="bg-white rounded-2xl overflow-hidden">
-            <PremiumProductBox product={product} mode={mode} affiliateTag={tagValid ? tag.trim() : 'amzwp-20'} />
+            <Suspense fallback={<div className="min-h-[420px] bg-white" />}>
+              <PremiumProductBox product={product} mode={mode} affiliateTag={tagValid ? tag.trim() : 'amzwp-20'} />
+            </Suspense>
           </div>
         </div>
       </div>
