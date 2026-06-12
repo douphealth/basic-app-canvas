@@ -104,5 +104,16 @@
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "overrides": {
+    "@tanstack/react-start": {
+      "vite": "$vite"
+    },
+    "@tanstack/react-router": {
+      "vite": "$vite"
+    },
+    "@tanstack/router-plugin": {
+      "vite": "$vite"
+    }
   }
 }
