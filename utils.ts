@@ -4222,6 +4222,7 @@ const buildFaqsFromApiData = (result: any, product: { title: string; price: stri
 // ============================================================================
 import {
   generateProductBoxHtml,
+  generateComparisonTableHtml as generateComparisonTableHtmlFromModule,
   getProductBoxStyles,
   wrapWithProductBoxStyles,
 } from './lib/html/product-boxes';
@@ -4231,108 +4232,7 @@ export { generateProductBoxHtml, getProductBoxStyles, wrapWithProductBoxStyles }
 // COMPARISON TABLE HTML GENERATION
 // ============================================================================
 
-/**
- * Truncate string to specified length (HELPER)
- */
-const truncateString = (str: string, maxLength: number): string => {
-  if (str.length <= maxLength) return str;
-  return str.substring(0, maxLength - 3) + '...';
-};
-
-/**
- * Generate comparison table HTML (EXPORTED)
- */
-export const generateComparisonTableHtml = (
-  data: ComparisonData,
-  products: ProductDetails[],
-  affiliateTag: string
-): string => {
-  const tag = affiliateTag || 'amzwp-20';
-  const tableProducts = data.productIds
-    .map(id => products.find(p => p.id === id))
-    .filter(Boolean) as ProductDetails[];
-
-  if (tableProducts.length < 2) return '';
-
-  const colWidth = Math.floor(100 / tableProducts.length);
-
-  const customSpecs = (data.specs || []).filter(
-    s => !['rating', 'reviews', 'prime', 'price'].includes(s.toLowerCase())
-  );
-
-  const specRows = customSpecs.map((spec, idx) => {
-    return `
-      <tr style="background:${idx % 2 === 0 ? '#f8fafc' : '#fff'};">
-        ${tableProducts.map(p => {
-          const value = p.specs?.[spec] || '-';
-          return `
-            <td style="padding:14px 16px;text-align:center;border-right:1px solid #f1f5f9;width:${colWidth}%;">
-              <div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">${spec}</div>
-              <div style="font-size:13px;font-weight:600;color:#1e293b;">${value}</div>
-            </td>
-          `;
-        }).join('')}
-      </tr>
-    `;
-  }).join('');
-
-  const shippingRow = tableProducts.some(p => p.prime) ? `
-      <tr style="background:#f8fafc;">
-        ${tableProducts.map(p => `
-          <td style="padding:14px 16px;text-align:center;border-right:1px solid #f1f5f9;width:${colWidth}%;">
-            <div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Shipping</div>
-            <div style="font-size:13px;font-weight:600;color:${p.prime ? '#059669' : '#94a3b8'};">${p.prime ? '&#9889; Prime' : 'Standard'}</div>
-          </td>
-        `).join('')}
-      </tr>
-  ` : '';
-
-  return `
-<!-- AmzWP Comparison Table -->
-<div style="max-width:1100px;margin:3rem auto;background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;border:1px solid #e2e8f0;">
-
-  <div style="background:linear-gradient(135deg,#0f172a,#1e293b);padding:20px 28px;display:flex;align-items:center;justify-content:space-between;">
-    <div>
-      <h3 style="margin:0;color:#fff;font-size:1.1rem;font-weight:800;letter-spacing:-0.01em;">${data.title}</h3>
-      <p style="margin:4px 0 0;color:#64748b;font-size:12px;">${tableProducts.length} products compared</p>
-    </div>
-    <div style="display:flex;align-items:center;gap:6px;">
-      <span style="width:6px;height:6px;border-radius:50%;background:#34d399;display:inline-block;"></span>
-      <span style="color:#64748b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;">Live Prices</span>
-    </div>
-  </div>
-
-  <div style="overflow-x:auto;">
-    <table style="width:100%;border-collapse:collapse;min-width:600px;">
-      <tbody>
-        <tr>
-          ${tableProducts.map((p, idx) => `
-            <td style="padding:28px 20px;text-align:center;background:${idx === 0 ? '#f0f9ff' : '#fff'};border-right:1px solid #f1f5f9;position:relative;vertical-align:top;width:${colWidth}%;">
-              ${idx === 0 ? '<div style="position:absolute;top:0;left:50%;transform:translateX(-50%);background:#2563eb;color:#fff;padding:5px 16px;border-radius:0 0 10px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;box-shadow:0 4px 12px rgba(37,99,235,0.3);">&#9733; Top Pick</div>' : ''}
-              <div style="height:140px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;${idx === 0 ? 'margin-top:12px;' : ''}">
-                <img src="${p.imageUrl}" alt="${p.title}" style="max-width:130px;max-height:130px;object-fit:contain;">
-              </div>
-              <h4 style="margin:0 0 10px;font-size:14px;font-weight:700;color:#0f172a;line-height:1.4;min-height:40px;">${truncateString(p.title, 55)}</h4>
-              <div style="color:#f59e0b;margin-bottom:4px;font-size:13px;letter-spacing:1px;">${'&#9733;'.repeat(Math.round(p.rating || 4.5))}</div>
-              <div style="font-size:11px;color:#94a3b8;margin-bottom:12px;">${p.rating?.toFixed(1) || '4.5'}/5 &middot; ${(p.reviewCount || 0).toLocaleString()} ratings</div>
-              <div style="font-size:28px;font-weight:900;color:#0f172a;margin-bottom:16px;letter-spacing:-0.02em;">${p.price}</div>
-              <a href="https://www.amazon.com/dp/${p.asin}?tag=${tag}" target="_blank" rel="nofollow sponsored noopener" style="display:inline-block;width:90%;padding:12px 20px;background:${idx === 0 ? '#2563eb' : '#0f172a'};color:#fff;text-decoration:none;border-radius:10px;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;box-shadow:0 4px 12px ${idx === 0 ? 'rgba(37,99,235,0.3)' : 'rgba(0,0,0,0.15)'};">Check Price &#8599;</a>
-            </td>
-          `).join('')}
-        </tr>
-
-        ${specRows}
-        ${shippingRow}
-      </tbody>
-    </table>
-  </div>
-
-  <div style="background:#f8fafc;padding:10px 28px;border-top:1px solid #f1f5f9;text-align:center;">
-    <p style="margin:0;color:#94a3b8;font-size:10px;">Prices and availability are accurate as of the date/time indicated and are subject to change.</p>
-  </div>
-</div>
-<!-- /AmzWP Comparison Table -->`;
-};
+export const generateComparisonTableHtml = generateComparisonTableHtmlFromModule;
 
 // ============================================================================
 // SCHEMA.ORG JSON-LD GENERATION
