@@ -41,6 +41,9 @@ import {
   IntelligenceCache,
   generateProductBoxHtml,
   wrapWithProductBoxStyles,
+} from '../utils';
+import { extractPalette } from '../lib/html/palette';
+const _ignore_dup = () => {
   generateComparisonTableHtml,
   lookupAsin,
   hasProductLookup,
