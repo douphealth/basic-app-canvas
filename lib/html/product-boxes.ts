@@ -116,13 +116,45 @@ const STYLES = `
 @media (prefers-reduced-motion:reduce){.amzwp-cta{transition:none}}
 `.replace(/\n+/g, '').replace(/\s{2,}/g, ' ').trim();
 
+/**
+ * Optional palette to theme every product box / table on the page.
+ * Pass colors derived from the host blog post; missing values fall back
+ * to the sensible defaults baked into STYLES via var(..., fallback).
+ */
+export interface ProductBoxPalette {
+  primary?: string;        // dominant brand color
+  primary2?: string;       // gradient companion (slightly shifted)
+  primaryLight?: string;   // softer accent (decorative)
+  accentTint?: string;     // very light tint background
+  accentText?: string;     // dark text on tint
+  accentBorder?: string;   // border on tint
+}
+
+const buildPaletteCss = (p: ProductBoxPalette): string => {
+  const decl = [
+    p.primary       && `--amzwp-primary:${p.primary}`,
+    p.primary2      && `--amzwp-primary-2:${p.primary2}`,
+    p.primaryLight  && `--amzwp-primary-light:${p.primaryLight}`,
+    p.accentTint    && `--amzwp-accent-tint:${p.accentTint}`,
+    p.accentText    && `--amzwp-accent-text:${p.accentText}`,
+    p.accentBorder  && `--amzwp-accent-border:${p.accentBorder}`,
+  ].filter(Boolean).join(';');
+  if (!decl) return '';
+  return `.amzwp-tl,.amzwp-eb,.amzwp-ct{${decl}}`;
+};
+
 /** Single <style> block. Insert ONCE per post; safe to dedupe by the marker. */
-export const getProductBoxStyles = (): string =>
-  `<style ${STYLE_MARKER}>${STYLES}</style>`;
+export const getProductBoxStyles = (palette?: ProductBoxPalette): string => {
+  const paletteCss = palette ? buildPaletteCss(palette) : '';
+  return `<style ${STYLE_MARKER}>${STYLES}${paletteCss}</style>`;
+};
 
 /** Prefix a chunk of HTML with the shared style block iff not already present. */
-export const wrapWithProductBoxStyles = (html: string): string =>
-  html.includes(STYLE_MARKER) ? html : `${getProductBoxStyles()}\n${html}`;
+export const wrapWithProductBoxStyles = (
+  html: string,
+  palette?: ProductBoxPalette,
+): string =>
+  html.includes(STYLE_MARKER) ? html : `${getProductBoxStyles(palette)}\n${html}`;
 
 // ---------------------------------------------------------------------------
 // Helpers (no inline runtime cost)
