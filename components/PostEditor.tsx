@@ -49,6 +49,7 @@ import {
   sanitizeAppConfig,
 } from '../utils';
 import { extractPalette } from '../lib/html/palette';
+import { splitHtmlPreservingShell } from '../lib/html/structure';
 
 import { ProductBoxPreview } from './ProductBoxPreview';
 import { PremiumProductBox } from './PremiumProductBox';
@@ -331,7 +332,8 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
         setProductMap(pMap);
 
         // Build nodes
-        const rawBlocks = splitContentIntoBlocks(result.content);
+        const shell = splitHtmlPreservingShell(result.content);
+        const rawBlocks = shell.blocks.length > 0 ? shell.blocks : splitContentIntoBlocks(result.content);
         if (rawBlocks.length === 0) throw new Error('Failed to parse content into blocks');
 
         const nodes: EditorNode[] = rawBlocks.map((block, idx) => ({
@@ -339,6 +341,24 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
           type: 'HTML' as const,
           content: block,
         }));
+
+        if (shell.prefix || shell.suffix) {
+          if (shell.prefix) {
+            nodes.unshift({
+              id: `shell-prefix-${Date.now()}`,
+              type: 'HTML' as const,
+              content: shell.prefix,
+            });
+          }
+
+          if (shell.suffix) {
+            nodes.push({
+              id: `shell-suffix-${Date.now()}`,
+              type: 'HTML' as const,
+              content: shell.suffix,
+            });
+          }
+        }
 
         // Place cached products
         const placedProducts = initialProducts

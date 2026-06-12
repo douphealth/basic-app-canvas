@@ -35,6 +35,7 @@ import { deduplicateRequest } from './lib/request-dedup';
 import { withRetry } from './lib/retry';
 import { fetchWordPressPostContent } from './src/lib/wordpress.functions';
 import { paapiGetItem, paapiSearchItem } from './src/lib/paapi.functions';
+import { splitHtmlPreservingShell } from './lib/html/structure';
 
 async function loadSupabaseClient() {
   const { supabase } = await import('./src/integrations/supabase/client');
@@ -3783,6 +3784,11 @@ export const fetchProductByASIN = async (
  */
 export const splitContentIntoBlocks = (html: string): string[] => {
   if (!html || html.trim().length === 0) return [];
+
+  const shellAware = splitHtmlPreservingShell(html);
+  if (shellAware.blocks.length > 1 || shellAware.prefix || shellAware.suffix) {
+    return shellAware.blocks;
+  }
 
   if (typeof window !== 'undefined' && typeof DOMParser !== 'undefined') {
     const doc = new DOMParser().parseFromString(html, 'text/html');
