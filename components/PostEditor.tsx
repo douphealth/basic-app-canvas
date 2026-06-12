@@ -62,7 +62,29 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import { toast } from 'sonner';
 import { preserveHtmlStructure, sanitizeHtml } from '../lib/sanitize';
-import { verifyAsin } from '@/src/lib/amazon.functions';
+
+const CONTENT_PROXY_URL = 'https://wybpgjcrmdcvnnltodgx.supabase.co/functions/v1/content-proxy';
+
+async function verifyAsinViaProxy(asin: string): Promise<{ ok: boolean; status: number; reason: string; finalUrl: string | null }> {
+  if (!/^[A-Z0-9]{10}$/i.test(asin)) {
+    return { ok: false, status: 0, reason: 'invalid_format', finalUrl: null };
+  }
+  try {
+    const resp = await fetch(`${CONTENT_PROXY_URL}?url=${encodeURIComponent(`https://www.amazon.com/dp/${asin.toUpperCase()}`)}`, {
+      headers: { Accept: 'text/html, */*' },
+    });
+    const proxiedStatus = parseInt(resp.headers.get('X-Proxied-Status') || '0', 10);
+    const finalUrl = resp.headers.get('X-Proxied-Url') || null;
+    const looksLikeProductPage = finalUrl ? (/\/(dp|gp\/product)\/[A-Z0-9]{10}/i.test(finalUrl) || finalUrl.includes(`/${asin.toUpperCase()}`)) : false;
+
+    if (proxiedStatus === 503) return { ok: true, status: 503, reason: 'amazon_throttled_assumed_ok', finalUrl };
+    if (proxiedStatus >= 200 && proxiedStatus < 400 && looksLikeProductPage) return { ok: true, status: proxiedStatus, reason: 'verified', finalUrl };
+    if (proxiedStatus === 404) return { ok: false, status: 404, reason: 'not_found', finalUrl };
+    return { ok: false, status: proxiedStatus, reason: looksLikeProductPage ? 'bad_status' : 'redirected_off_product', finalUrl };
+  } catch (err: any) {
+    return { ok: false, status: 0, reason: err?.name === 'AbortError' ? 'timeout' : 'network_error', finalUrl: null };
+  }
+}
 
 // ============================================================================
 // CONSTANTS
@@ -928,7 +950,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
 
       setAddingProduct(true);
       try {
-        const reach = await verifyAsin({ data: { asin } });
+        const reach = await verifyAsinViaProxy(asin);
         if (!reach.ok) {
           const msg =
             reach.reason === 'not_found' ? `ASIN ${asin} returns 404 on amazon.com — not a real product.` :

@@ -33,7 +33,7 @@ import {
 } from './types';
 import { deduplicateRequest } from './lib/request-dedup';
 import { withRetry } from './lib/retry';
-import { paapiGetItem, paapiSearchItem } from './src/lib/paapi.functions';
+const PAAPI_PROXY_EDGE_FN = 'https://wybpgjcrmdcvnnltodgx.supabase.co/functions/v1/paapi-proxy';
 import { splitHtmlPreservingShell } from './lib/html/structure';
 
 async function loadSupabaseClient() {
@@ -160,9 +160,13 @@ export async function lookupAsin(
       const cached = IntelligenceCache.getProduct(normalized);
       if (cached) return cached;
       const creds = await resolveAmazonCreds(config);
-      const res = await paapiGetItem({
-        data: { asin: normalized, ...creds },
+      const resp = await fetch(PAAPI_PROXY_EDGE_FN, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...creds, operation: 'GetItems', asin: normalized }),
       });
+      const res = await resp.json();
+      if (!resp.ok) throw new Error(res.error || `PA-API proxy HTTP ${resp.status}`);
       if (res?.product) {
         const product = paapiToFullProduct(normalized, res.product);
         IntelligenceCache.setProduct(normalized, product);
@@ -193,9 +197,13 @@ export async function lookupAmazonSearch(
   if (hasPaapiCreds(config)) {
     try {
       const creds = await resolveAmazonCreds(config);
-      const res = await paapiSearchItem({
-        data: { keyword: q, ...creds },
+      const resp = await fetch(PAAPI_PROXY_EDGE_FN, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...creds, operation: 'SearchItems', keyword: q }),
       });
+      const res = await resp.json();
+      if (!resp.ok) throw new Error(res.error || `PA-API proxy HTTP ${resp.status}`);
       if (res?.product) {
         return {
           asin: res.product.asin,
