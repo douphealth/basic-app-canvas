@@ -92,6 +92,11 @@ interface EditorNode {
   comparisonData?: ComparisonData;
 }
 
+interface HtmlShell {
+  prefix: string;
+  suffix: string;
+}
+
 interface ScanProgress {
   stage: string;
   current: number;
@@ -270,6 +275,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
   const relevanceCache = useRef<Map<string, number>>(new Map());
   const editedHtmlNodesRef = useRef<Set<string>>(new Set());
   const canvasRef = useRef<HTMLDivElement>(null);
+  const htmlShellRef = useRef<HtmlShell>({ prefix: '', suffix: '' });
 
   // ========================================================================
   // DRAG & DROP
@@ -333,6 +339,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
 
         // Build nodes
         const shell = splitHtmlPreservingShell(result.content);
+        htmlShellRef.current = { prefix: shell.prefix, suffix: shell.suffix };
         const rawBlocks = shell.blocks.length > 0 ? shell.blocks : splitContentIntoBlocks(result.content);
         if (rawBlocks.length === 0) throw new Error('Failed to parse content into blocks');
 
@@ -341,24 +348,6 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
           type: 'HTML' as const,
           content: block,
         }));
-
-        if (shell.prefix || shell.suffix) {
-          if (shell.prefix) {
-            nodes.unshift({
-              id: `shell-prefix-${Date.now()}`,
-              type: 'HTML' as const,
-              content: shell.prefix,
-            });
-          }
-
-          if (shell.suffix) {
-            nodes.push({
-              id: `shell-suffix-${Date.now()}`,
-              type: 'HTML' as const,
-              content: shell.suffix,
-            });
-          }
-        }
 
         // Place cached products
         const placedProducts = initialProducts
@@ -1047,12 +1036,13 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
       (n) => (n.type === 'PRODUCT' && n.productId && productMap[n.productId]) ||
         (n.type === 'COMPARISON' && n.comparisonData),
     );
-    if (!hasBoxes) return body;
+    const wrappedBody = `${htmlShellRef.current.prefix}${body}${htmlShellRef.current.suffix}`;
+    if (!hasBoxes) return wrappedBody;
 
     // Derive a palette from the post's own HTML so every product box adopts
     // the blog's brand color automatically. Safe-fail: undefined keeps defaults.
     const palette = extractPalette(htmlOnly.join('\n'));
-    return wrapWithProductBoxStyles(body, palette);
+    return wrapWithProductBoxStyles(wrappedBody, palette);
   }, [editorNodes, productMap, config.amazonTag]);
 
   const handlePush = useCallback(async () => {
