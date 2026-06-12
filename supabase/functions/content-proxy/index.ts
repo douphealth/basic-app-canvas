@@ -31,11 +31,19 @@ Deno.serve(async (req: Request) => {
   }
 
   let targetUrl: string | null = null;
+  let forwardHeaders: Record<string, string> = {};
+  let accept = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
 
   if (req.method === "POST") {
     try {
       const body = await req.json();
       targetUrl = body.url;
+      if (body.headers && typeof body.headers === "object") {
+        forwardHeaders = body.headers;
+      }
+      if (body.accept) {
+        accept = body.accept;
+      }
     } catch {
       return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
         status: 400,
@@ -43,8 +51,8 @@ Deno.serve(async (req: Request) => {
       });
     }
   } else {
-    const urlParam = new URL(req.url).searchParams.get("url");
-    targetUrl = urlParam ? decodeURIComponent(urlParam) : null;
+    const params = new URL(req.url).searchParams;
+    targetUrl = params.get("url") ? decodeURIComponent(params.get("url")!) : null;
   }
 
   if (!targetUrl || !isAllowedUrl(targetUrl)) {
@@ -58,14 +66,17 @@ Deno.serve(async (req: Request) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
 
+    const fetchHeaders: Record<string, string> = {
+      "User-Agent": "Mozilla/5.0 (compatible; AmzWP-Automator/2.0; +https://amzwp.app)",
+      Accept: accept,
+      "Accept-Language": "en-US,en;q=0.9",
+      "Cache-Control": "no-cache",
+      ...forwardHeaders,
+    };
+
     const response = await fetch(targetUrl, {
       signal: controller.signal,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; AmzWP-Automator/2.0; +https://amzwp.app)",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache",
-      },
+      headers: fetchHeaders,
       redirect: "follow",
     });
 

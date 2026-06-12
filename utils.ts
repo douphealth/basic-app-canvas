@@ -33,7 +33,6 @@ import {
 } from './types';
 import { deduplicateRequest } from './lib/request-dedup';
 import { withRetry } from './lib/retry';
-import { fetchWordPressPostContent } from './src/lib/wordpress.functions';
 import { paapiGetItem, paapiSearchItem } from './src/lib/paapi.functions';
 import { splitHtmlPreservingShell } from './lib/html/structure';
 
@@ -1677,7 +1676,7 @@ const fetchViaWordPressAPI = async (
 };
 
 /**
- * Fetch raw post content by ID or URL
+ * Fetch raw post content by ID or URL via the content-proxy edge function
  */
 export const fetchRawPostContent = async (
   config: AppConfig,
@@ -1685,20 +1684,84 @@ export const fetchRawPostContent = async (
   postUrl: string
 ): Promise<{ content: string; resolvedId: number }> => {
   const { user, appPassword } = await resolveWpCreds(config);
-  const result = await fetchWordPressPostContent({
-    data: {
-      postId,
-      postUrl,
-      wpUrl: config.wpUrl,
-      wpUser: user,
-      wpAppPassword: appPassword,
-    },
-  });
+  const wpBase = (config.wpUrl || '').trim().replace(/\/$/, '').replace(/\/wp-json(?:\/wp\/v2|\/v2)?$/i, '');
 
-  return {
-    content: result.content,
-    resolvedId: result.resolvedId,
+  const apiBases: string[] = [];
+  if (wpBase) apiBases.push(`${wpBase}/wp-json/wp/v2`);
+  if (postUrl) {
+    try {
+      const origin = new URL(postUrl).origin;
+      const derivedBase = `${origin}/wp-json/wp/v2`;
+      if (!apiBases.includes(derivedBase)) apiBases.push(derivedBase);
+    } catch {}
+  }
+
+  if (apiBases.length === 0) throw new Error('No WordPress URL configured');
+
+  const authHeader = user && appPassword
+    ? `Basic ${btoa(`${user}:${appPassword}`)}`
+    : null;
+
+  const slug = postUrl ? (() => { try { return new URL(postUrl).pathname.split('/').filter(Boolean).pop() || null; } catch { return null; } })() : null;
+  const urlPostId = postUrl ? (() => { try { const p = new URL(postUrl).searchParams.get('p'); return p && /^\d+$/.test(p) ? Number(p) : null; } catch { return null; } })() : null;
+
+  const errors: string[] = [];
+
+  const proxyFetchJson = async (url: string) => {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'User-Agent': 'Mozilla/5.0 (compatible; AmzWP-Importer/1.0)',
+    };
+    if (authHeader) headers['Authorization'] = authHeader;
+
+    const resp = await fetch(CONTENT_PROXY_EDGE_FN, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, headers, accept: 'application/json' }),
+    });
+
+    if (!resp.ok) return null;
+    const text = await resp.text();
+    if (!text || text.startsWith('<!') || isWebContainerHtml(text)) return null;
+    try { return JSON.parse(text); } catch { return null; }
   };
+
+  const normalizeWpContent = (entity: any) => {
+    const c = entity?.content?.raw || entity?.content?.rendered || '';
+    return typeof c === 'string' ? c.trim() : '';
+  };
+
+  for (const apiBase of apiBases) {
+    try {
+      const idsToTry = Array.from(new Set([postId, urlPostId].filter((v): v is number => typeof v === 'number' && v > 0)));
+
+      for (const id of idsToTry) {
+        const contextParam = authHeader ? '?context=edit' : '';
+        const post = await proxyFetchJson(`${apiBase}/posts/${id}${contextParam}`);
+        const postContent = normalizeWpContent(post);
+        if (postContent.length > 50) return { content: postContent, resolvedId: post?.id ?? id };
+
+        const page = await proxyFetchJson(`${apiBase}/pages/${id}${contextParam}`);
+        const pageContent = normalizeWpContent(page);
+        if (pageContent.length > 50) return { content: pageContent, resolvedId: page?.id ?? id };
+      }
+
+      if (slug) {
+        const posts = await proxyFetchJson(`${apiBase}/posts?slug=${encodeURIComponent(slug)}`);
+        const matched = Array.isArray(posts) ? posts.find((p: any) => normalizeWpContent(p).length > 50) : null;
+        if (matched) return { content: normalizeWpContent(matched), resolvedId: matched.id ?? postId };
+
+        const pages = await proxyFetchJson(`${apiBase}/pages?slug=${encodeURIComponent(slug)}`);
+        const matchedPage = Array.isArray(pages) ? pages.find((p: any) => normalizeWpContent(p).length > 50) : null;
+        if (matchedPage) return { content: normalizeWpContent(matchedPage), resolvedId: matchedPage.id ?? postId };
+      }
+    } catch (e: any) {
+      errors.push(`${apiBase}: ${e.message}`);
+    }
+  }
+
+  const detail = errors.length > 0 ? ` (${errors.slice(0, 2).join(' | ')})` : '';
+  throw new Error(`Could not load editable post content from WordPress${detail}`);
 };
 
 /**
