@@ -994,9 +994,16 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
   // ========================================================================
 
   const generateFinalHtml = useCallback((): string => {
+    // Collect the raw post HTML separately so we can sample its colors and
+    // theme the product boxes to match the surrounding article.
+    const htmlOnly: string[] = [];
     const body = editorNodes
       .map((node) => {
-        if (node.type === 'HTML') return preserveHtmlStructure(node.content || '');
+        if (node.type === 'HTML') {
+          const h = preserveHtmlStructure(node.content || '');
+          htmlOnly.push(h);
+          return h;
+        }
         if (node.type === 'PRODUCT' && node.productId && productMap[node.productId]) {
           return generateProductBoxHtml(
             productMap[node.productId],
@@ -1014,13 +1021,17 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
         return '';
       })
       .join('\n\n');
-    // Hoist the shared product-box CSS exactly once. wrapWithProductBoxStyles
-    // is idempotent — no-op when the marker is already present.
+
     const hasBoxes = editorNodes.some(
       (n) => (n.type === 'PRODUCT' && n.productId && productMap[n.productId]) ||
         (n.type === 'COMPARISON' && n.comparisonData),
     );
-    return hasBoxes ? wrapWithProductBoxStyles(body) : body;
+    if (!hasBoxes) return body;
+
+    // Derive a palette from the post's own HTML so every product box adopts
+    // the blog's brand color automatically. Safe-fail: undefined keeps defaults.
+    const palette = extractPalette(htmlOnly.join('\n'));
+    return wrapWithProductBoxStyles(body, palette);
   }, [editorNodes, productMap, config.amazonTag]);
 
   const handlePush = useCallback(async () => {
