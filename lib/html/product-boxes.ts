@@ -100,32 +100,77 @@ const STYLES = `
 .amzwp-eb-trust span{display:inline-flex;align-items:center;gap:4px}
 .amzwp-eb-disc{text-align:center;font-size:9px;color:#94a3b8;margin-top:10px;line-height:1.5}
 
-/* Comparison table */
-.amzwp-ct{max-width:1100px;margin:clamp(1.5rem,5cqw,3rem) auto;background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(15,23,42,.06);overflow:hidden;border:1px solid #e2e8f0;container-type:inline-size}
-.amzwp-ct *{box-sizing:border-box}
-.amzwp-ct-head{background:linear-gradient(135deg,#0f172a,#1e293b);padding:clamp(14px,3cqw,22px) clamp(16px,4cqw,28px);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.amzwp-ct-head h3{margin:0;color:#fff;font-size:clamp(15px,3.4cqw,18px);font-weight:800;letter-spacing:-.01em}
-.amzwp-ct-head p{margin:4px 0 0;color:#94a3b8;font-size:12px}
-.amzwp-ct-live{display:inline-flex;align-items:center;gap:6px;color:#94a3b8;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em}
-.amzwp-ct-live::before{content:"";width:6px;height:6px;border-radius:50%;background:#34d399;display:inline-block;box-shadow:0 0 0 3px rgba(52,211,153,.15)}
-.amzwp-ct-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.amzwp-ct table{width:100%;border-collapse:collapse;min-width:min(640px,100%)}
-.amzwp-ct td{padding:14px 12px;text-align:center;border-right:1px solid #f1f5f9;vertical-align:top}
-.amzwp-ct td:last-child{border-right:0}
-.amzwp-ct-cell-head{padding:28px 16px!important;position:relative}
-.amzwp-ct-top{background:linear-gradient(180deg,#f0f9ff,#fff)!important}
-.amzwp-ct-top-badge{position:absolute;top:0;left:50%;transform:translateX(-50%);background:#0ea5e9;color:#fff;padding:5px 14px;border-radius:0 0 10px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;box-shadow:0 4px 12px rgba(14,165,233,.25)}
-.amzwp-ct-img{height:clamp(100px,12cqw,140px);display:flex;align-items:center;justify-content:center;margin-bottom:12px}
-.amzwp-ct-img img{max-width:clamp(90px,11cqw,130px);max-height:100%;object-fit:contain}
-.amzwp-ct-title{margin:0 0 8px;font-size:clamp(12px,2.6cqw,14px);font-weight:700;color:#0f172a;line-height:1.35;min-height:36px}
-.amzwp-ct-price{font-size:clamp(20px,4.2cqw,28px);font-weight:900;color:#0f172a;margin-bottom:12px;letter-spacing:-.02em}
-.amzwp-ct-cta{display:inline-block;width:90%;padding:10px 16px;background:#0f172a;color:#fff;text-decoration:none;border-radius:10px;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.06em;transition:background .25s}
-.amzwp-ct-cta-top{background:linear-gradient(135deg,#10b981,#0d9488);box-shadow:0 8px 18px rgba(16,185,129,.22)}
-.amzwp-ct-row-alt{background:#f8fafc}
-.amzwp-ct-spec-label{font-size:10px;color:#94a3b8;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
-.amzwp-ct-spec-val{font-size:13px;font-weight:600;color:#1e293b}
-.amzwp-ct-foot{background:#f8fafc;padding:10px 28px;border-top:1px solid #f1f5f9;text-align:center;color:#94a3b8;font-size:10px}
-.amzwp-ct-stars{color:#f59e0b;letter-spacing:0.5px}
+/* Comparison table — div-based card grid, WordPress-proof */
+.amzwp-ct{max-width:1100px;margin:clamp(2rem,5cqw,3.5rem) auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-font-smoothing:antialiased;container-type:inline-size;line-height:1.5;color:#0f172a}
+.amzwp-ct,.amzwp-ct *,.amzwp-ct *::before,.amzwp-ct *::after{box-sizing:border-box;margin:0;padding:0;border:0;outline:0}
+.amzwp-ct a{text-decoration:none!important;color:inherit}
+.amzwp-ct img{max-width:100%;height:auto;display:block;border:none!important;box-shadow:none!important}
+
+.amzwp-ct-header{text-align:center;margin-bottom:clamp(20px,4cqw,32px)}
+.amzwp-ct-pill{display:inline-flex;align-items:center;gap:8px;background:#f1f5f9;border-radius:999px;padding:6px 16px;margin-bottom:12px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em}
+.amzwp-ct-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+.amzwp-ct-header h3{margin:0!important;padding:0!important;border:none!important;color:#0f172a;font-size:clamp(20px,5cqw,32px);font-weight:900;letter-spacing:-.02em;line-height:1.2}
+.amzwp-ct-header p{margin:8px 0 0!important;color:#94a3b8;font-size:13px;font-weight:500}
+
+.amzwp-ct-grid{display:grid;grid-template-columns:1fr;gap:clamp(12px,3cqw,20px)}
+@container (min-width:520px){.amzwp-ct-grid{grid-template-columns:repeat(2,1fr)}}
+@container (min-width:820px){.amzwp-ct-grid{grid-template-columns:repeat(var(--ct-cols,3),1fr)}}
+
+.amzwp-ct-card{position:relative;background:#fff;border-radius:clamp(16px,3cqw,24px);border:1px solid #e2e8f0;overflow:hidden;transition:transform .3s cubic-bezier(.4,0,.2,1),box-shadow .3s cubic-bezier(.4,0,.2,1)}
+.amzwp-ct-card:hover{transform:translateY(-4px);box-shadow:0 20px 48px -12px rgba(15,23,42,.12)}
+.amzwp-ct-card-top{border-color:#0ea5e9;box-shadow:0 8px 32px -8px rgba(14,165,233,.15)}
+.amzwp-ct-card-top:hover{box-shadow:0 20px 48px -12px rgba(14,165,233,.2)}
+
+.amzwp-ct-accent{height:4px;background:linear-gradient(90deg,#0ea5e9,#06b6d4)}
+.amzwp-ct-badge{display:flex;justify-content:center;padding-top:14px}
+.amzwp-ct-badge span{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;padding:6px 16px;border-radius:999px;box-shadow:0 4px 12px rgba(14,165,233,.25)}
+.amzwp-ct-badge svg{width:12px;height:12px;fill:currentColor}
+
+.amzwp-ct-body{padding:clamp(16px,4cqw,28px)}
+.amzwp-ct-imgbox{position:relative;height:clamp(120px,18cqw,180px);display:flex;align-items:center;justify-content:center;margin-bottom:clamp(12px,3cqw,20px);background:linear-gradient(180deg,#f8fafc 0%,#fff 100%);border-radius:16px;overflow:hidden}
+.amzwp-ct-imgbox img{max-height:85%;max-width:80%;object-fit:contain;transition:transform .4s cubic-bezier(.4,0,.2,1);filter:drop-shadow(0 8px 16px rgba(0,0,0,.08))}
+.amzwp-ct-card:hover .amzwp-ct-imgbox img{transform:scale(1.06)}
+
+.amzwp-ct-brand{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:6px}
+.amzwp-ct-title{font-size:clamp(13px,3cqw,15px);font-weight:700;color:#0f172a;line-height:1.4;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:40px}
+
+.amzwp-ct-rating{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.amzwp-ct-stars{color:#f59e0b;font-size:14px;letter-spacing:1px;line-height:1}
+.amzwp-ct-rating-num{font-size:13px;font-weight:800;color:#0f172a}
+.amzwp-ct-rating-count{font-size:11px;color:#94a3b8;font-weight:500}
+
+.amzwp-ct-scorebar{height:4px;background:#f1f5f9;border-radius:999px;overflow:hidden;margin-bottom:16px}
+.amzwp-ct-scorebar-fill{height:100%;border-radius:999px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+
+.amzwp-ct-price{font-size:clamp(24px,5.5cqw,32px);font-weight:900;color:#0f172a;letter-spacing:-.03em;margin-bottom:4px;line-height:1.1}
+.amzwp-ct-shipping{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px}
+.amzwp-ct-prime{background:#232f3e;color:#fff;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:4px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:4px}
+.amzwp-ct-prime svg{width:10px;height:10px;fill:currentColor}
+.amzwp-ct-standard{font-size:11px;color:#94a3b8;font-weight:500}
+
+.amzwp-ct-cta{display:flex!important;align-items:center;justify-content:center;gap:8px;width:100%;padding:clamp(12px,3cqw,16px) 20px;border-radius:12px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#fff!important;background:#0f172a;transition:all .25s cubic-bezier(.4,0,.2,1);box-shadow:0 4px 12px rgba(15,23,42,.15)}
+.amzwp-ct-cta:hover{background:#1e293b;transform:translateY(-2px);box-shadow:0 8px 24px rgba(15,23,42,.2)}
+.amzwp-ct-cta svg{width:14px;height:14px;stroke:currentColor;stroke-width:2.5;fill:none}
+.amzwp-ct-cta-top{background:linear-gradient(135deg,#0ea5e9,#0284c7)!important;box-shadow:0 8px 24px rgba(14,165,233,.25)}
+.amzwp-ct-cta-top:hover{background:linear-gradient(135deg,#38bdf8,#0ea5e9)!important;box-shadow:0 12px 32px rgba(14,165,233,.3)}
+
+.amzwp-ct-specs{margin-top:clamp(20px,4cqw,32px);background:#fff;border-radius:clamp(16px,3cqw,20px);border:1px solid #e2e8f0;overflow:hidden}
+.amzwp-ct-specs-head{padding:clamp(12px,3cqw,18px) clamp(16px,4cqw,24px);background:#f8fafc;border-bottom:1px solid #e2e8f0}
+.amzwp-ct-specs-head h4{margin:0!important;font-size:12px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:.08em}
+.amzwp-ct-specs-grid{display:grid;grid-template-columns:140px repeat(var(--ct-cols,3),1fr)}
+@container (max-width:600px){.amzwp-ct-specs-grid{grid-template-columns:100px repeat(var(--ct-cols,3),1fr)}}
+.amzwp-ct-specs-row{display:contents}
+.amzwp-ct-specs-row:nth-child(even) > *{background:#f9fafb}
+.amzwp-ct-specs-row > *{padding:clamp(10px,2.5cqw,14px) clamp(10px,2.5cqw,16px);border-bottom:1px solid #f1f5f9;display:flex;align-items:center}
+.amzwp-ct-specs-row:last-child > *{border-bottom:0}
+.amzwp-ct-spec-label{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em}
+.amzwp-ct-spec-val{font-size:13px;font-weight:600;color:#1e293b;justify-content:center;text-align:center}
+
+.amzwp-ct-foot{text-align:center;margin-top:clamp(12px,3cqw,20px);padding:0 16px}
+.amzwp-ct-foot p{margin:0!important;color:#94a3b8;font-size:11px;font-weight:500}
+.amzwp-ct-foot-live{display:inline-flex;align-items:center;gap:6px;color:#94a3b8;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-top:6px}
+.amzwp-ct-foot-live::before{content:"";width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block;animation:amzwp-pulse 2s infinite}
+@keyframes amzwp-pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 @media(prefers-reduced-motion:reduce){.amzwp-tl,.amzwp-eb-cta{transition:none}}
 `.replace(/\n+/g, '').replace(/\s{2,}/g, ' ').trim();
@@ -304,41 +349,80 @@ export const generateComparisonTableHtml = (
     .filter(Boolean) as ProductDetails[];
   if (tableProducts.length < 2) return '';
 
-  const colWidth = Math.floor(100 / tableProducts.length);
+  const cols = tableProducts.length;
   const customSpecs = (data.specs || []).filter(
     s => !['rating', 'reviews', 'prime', 'price'].includes(s.toLowerCase()),
   );
 
-  const specRows = customSpecs.map((spec, idx) => `
-<tr${idx % 2 === 0 ? ' class="amzwp-ct-row-alt"' : ''}>
-${tableProducts.map(p => `<td style="width:${colWidth}%"><div class="amzwp-ct-spec-label">${escHtml(spec)}</div><div class="amzwp-ct-spec-val">${escHtml(p.specs?.[spec] || '-')}</div></td>`).join('')}
-</tr>`).join('');
+  const starsFull = (rating: number) => {
+    const r = Math.min(5, Math.max(0, Math.round(rating)));
+    return '\u2605'.repeat(r) + '\u2606'.repeat(5 - r);
+  };
 
-  const shippingRow = tableProducts.some(p => p.prime) ? `
-<tr class="amzwp-ct-row-alt">
-${tableProducts.map(p => `<td style="width:${colWidth}%"><div class="amzwp-ct-spec-label">Shipping</div><div class="amzwp-ct-spec-val" style="color:${p.prime ? '#059669' : '#94a3b8'}">${p.prime ? '&#9889; Prime' : 'Standard'}</div></td>`).join('')}
-</tr>` : '';
+  const scoreBarColor = (idx: number) =>
+    idx === 0 ? '#0ea5e9' : '#1e293b';
+
+  const cards = tableProducts.map((p, idx) => {
+    const isTop = idx === 0;
+    const pct = Math.min(100, ((p.rating || 4.5) / 5) * 100);
+    const brandHtml = p.brand ? `<div class="amzwp-ct-brand">${escHtml(p.brand)}</div>` : '';
+    const shippingHtml = p.prime
+      ? `<div class="amzwp-ct-shipping"><span class="amzwp-ct-prime"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Prime</span></div>`
+      : `<div class="amzwp-ct-shipping"><span class="amzwp-ct-standard">Standard shipping</span></div>`;
+
+    return `<div class="amzwp-ct-card${isTop ? ' amzwp-ct-card-top' : ''}">
+${isTop ? `<div class="amzwp-ct-accent"></div>
+<div class="amzwp-ct-badge"><span><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Top Pick</span></div>` : ''}
+<div class="amzwp-ct-body">
+<div class="amzwp-ct-imgbox"><img src="${escAttr(p.imageUrl)}" alt="${escAttr(p.title)}" loading="lazy"></div>
+${brandHtml}
+<div class="amzwp-ct-title">${escHtml(truncate(p.title, 60))}</div>
+<div class="amzwp-ct-rating">
+<span class="amzwp-ct-stars">${starsFull(p.rating || 4.5)}</span>
+<span class="amzwp-ct-rating-num">${(p.rating || 4.5).toFixed(1)}</span>
+<span class="amzwp-ct-rating-count">(${(p.reviewCount || 0).toLocaleString()})</span>
+</div>
+<div class="amzwp-ct-scorebar"><div class="amzwp-ct-scorebar-fill" style="width:${pct}%;background:${scoreBarColor(idx)}"></div></div>
+<div class="amzwp-ct-price">${escHtml(p.price)}</div>
+${shippingHtml}
+<a class="amzwp-ct-cta${isTop ? ' amzwp-ct-cta-top' : ''}" href="https://www.amazon.com/dp/${escAttr(p.asin)}?tag=${encodeURIComponent(tag)}" target="_blank" rel="nofollow sponsored noopener">
+<svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+Check Amazon Price
+<svg viewBox="0 0 24 24"><path d="M7 17l9.2-9.2M17 17V8H8"/></svg>
+</a>
+</div>
+</div>`;
+  }).join('\n');
+
+  const specsHtml = customSpecs.length > 0 ? `
+<div class="amzwp-ct-specs">
+<div class="amzwp-ct-specs-head"><h4>Detailed Specifications</h4></div>
+<div class="amzwp-ct-specs-grid" style="--ct-cols:${cols}">
+${customSpecs.map(spec => `<div class="amzwp-ct-specs-row">
+<div class="amzwp-ct-spec-label">${escHtml(spec)}</div>
+${tableProducts.map(p => `<div class="amzwp-ct-spec-val">${escHtml(p.specs?.[spec] || '\u2014')}</div>`).join('')}
+</div>`).join('\n')}
+${tableProducts.some(p => p.prime) ? `<div class="amzwp-ct-specs-row">
+<div class="amzwp-ct-spec-label">Shipping</div>
+${tableProducts.map(p => `<div class="amzwp-ct-spec-val" style="color:${p.prime ? '#059669' : '#94a3b8'}">${p.prime ? '\u26A1 Prime' : 'Standard'}</div>`).join('')}
+</div>` : ''}
+</div>
+</div>` : '';
 
   return `<div class="amzwp-box"><div class="amzwp-ct">
-<div class="amzwp-ct-head">
-<div><h3>${escHtml(data.title)}</h3><p>${tableProducts.length} products compared</p></div>
-<div class="amzwp-ct-live">Live Prices</div>
+<div class="amzwp-ct-header">
+<div class="amzwp-ct-pill">Product Comparison</div>
+<h3>${escHtml(data.title)}</h3>
+<p>${tableProducts.length} products compared side by side</p>
 </div>
-<div class="amzwp-ct-scroll"><table><tbody>
-<tr>
-${tableProducts.map((p, idx) => `<td class="amzwp-ct-cell-head${idx === 0 ? ' amzwp-ct-top' : ''}" style="width:${colWidth}%">
-${idx === 0 ? '<div class="amzwp-ct-top-badge">&#9733; Top Pick</div>' : ''}
-<div class="amzwp-ct-img"><img src="${escAttr(p.imageUrl)}" alt="${escAttr(p.title)}" loading="lazy"></div>
-<div class="amzwp-ct-title">${escHtml(truncate(p.title, 55))}</div>
-<div class="amzwp-ct-stars" style="margin-bottom:4px">${'\u2605'.repeat(stars(p.rating))}</div>
-<div style="font-size:11px;color:#94a3b8;margin-bottom:12px">${(p.rating || 4.5).toFixed(1)}/5 &#183; ${(p.reviewCount || 0).toLocaleString()} ratings</div>
-<div class="amzwp-ct-price">${escHtml(p.price)}</div>
-<a class="amzwp-ct-cta${idx === 0 ? ' amzwp-ct-cta-top' : ''}" href="https://www.amazon.com/dp/${escAttr(p.asin)}?tag=${encodeURIComponent(tag)}" target="_blank" rel="nofollow sponsored noopener">Check Price &#8599;</a>
-</td>`).join('')}
-</tr>
-${specRows}${shippingRow}
-</tbody></table></div>
-<div class="amzwp-ct-foot">Prices and availability are accurate as of the date/time indicated and are subject to change.</div>
+<div class="amzwp-ct-grid" style="--ct-cols:${cols}">
+${cards}
+</div>
+${specsHtml}
+<div class="amzwp-ct-foot">
+<p>Prices and availability are accurate as of the date/time indicated and are subject to change.</p>
+<div class="amzwp-ct-foot-live">Live Prices</div>
+</div>
 </div></div>`;
 };
 
