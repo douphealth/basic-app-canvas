@@ -6,7 +6,7 @@ import tsConfigPaths from 'vite-tsconfig-paths';
 import tailwindcss from '@tailwindcss/vite';
 import { componentTagger } from 'lovable-tagger';
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode, command }) => ({
   plugins: [
     mode !== 'development' && cloudflare(),
     tanstackStart({
@@ -24,10 +24,14 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     allowedHosts: true,
   },
-  ssr: {
-    // Bundle ALL dependencies into the worker build. Partial lists break
-    // production: e.g. bundling 'h3-v2' while leaving its dep 'rou3'
-    // external produced "No such module assets/rou3" crashes on deploy.
-    noExternal: true,
-  },
+  ssr:
+    command === 'build'
+      ? {
+          // Bundle all dependencies only for the production worker build.
+          // Doing this in dev makes Vite try to evaluate CommonJS packages
+          // like React via the SSR module runner, which crashes with
+          // "ReferenceError: module is not defined".
+          noExternal: true,
+        }
+      : undefined,
 }));
