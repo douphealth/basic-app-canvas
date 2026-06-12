@@ -33,6 +33,7 @@ import {
   pushToWordPress,
   splitContentIntoBlocks,
 } from '../utils';
+import { splitHtmlPreservingShell } from '../lib/html/structure';
 
 export interface BatchJob {
   id: string;
@@ -110,7 +111,8 @@ export const BatchProcessor: React.FC<BatchProcessorProps> = ({
 
       if (productsFound > 0 && autoPublish) {
         // Build final HTML with product boxes inserted
-        const blocks = splitContentIntoBlocks(content);
+        const shell = splitHtmlPreservingShell(content);
+        const blocks = shell.blocks.length > 0 ? shell.blocks : splitContentIntoBlocks(content);
         const products = analysis.detectedProducts || [];
         let finalParts: string[] = [...blocks];
 
@@ -125,7 +127,7 @@ export const BatchProcessor: React.FC<BatchProcessorProps> = ({
           finalParts.splice(idx, 0, boxHtml);
         }
 
-        const finalHtml = finalParts.join('\n\n');
+        const finalHtml = `${shell.prefix}${finalParts.join('\n\n')}${shell.suffix}`;
 
         // Stage 4: Push to WordPress
         setJobs(prev => prev.map(j => j.id === job.id ? { ...j, progress: 85 } : j));

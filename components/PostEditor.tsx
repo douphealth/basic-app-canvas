@@ -49,6 +49,7 @@ import {
   sanitizeAppConfig,
 } from '../utils';
 import { extractPalette } from '../lib/html/palette';
+import { splitHtmlPreservingShell } from '../lib/html/structure';
 
 import { ProductBoxPreview } from './ProductBoxPreview';
 import { PremiumProductBox } from './PremiumProductBox';
@@ -89,6 +90,11 @@ interface EditorNode {
   content?: string;
   productId?: string;
   comparisonData?: ComparisonData;
+}
+
+interface HtmlShell {
+  prefix: string;
+  suffix: string;
 }
 
 interface ScanProgress {
@@ -269,6 +275,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
   const relevanceCache = useRef<Map<string, number>>(new Map());
   const editedHtmlNodesRef = useRef<Set<string>>(new Set());
   const canvasRef = useRef<HTMLDivElement>(null);
+  const htmlShellRef = useRef<HtmlShell>({ prefix: '', suffix: '' });
 
   // ========================================================================
   // DRAG & DROP
@@ -331,7 +338,9 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
         setProductMap(pMap);
 
         // Build nodes
-        const rawBlocks = splitContentIntoBlocks(result.content);
+        const shell = splitHtmlPreservingShell(result.content);
+        htmlShellRef.current = { prefix: shell.prefix, suffix: shell.suffix };
+        const rawBlocks = shell.blocks.length > 0 ? shell.blocks : splitContentIntoBlocks(result.content);
         if (rawBlocks.length === 0) throw new Error('Failed to parse content into blocks');
 
         const nodes: EditorNode[] = rawBlocks.map((block, idx) => ({
@@ -1027,12 +1036,13 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
       (n) => (n.type === 'PRODUCT' && n.productId && productMap[n.productId]) ||
         (n.type === 'COMPARISON' && n.comparisonData),
     );
-    if (!hasBoxes) return body;
+    const wrappedBody = `${htmlShellRef.current.prefix}${body}${htmlShellRef.current.suffix}`;
+    if (!hasBoxes) return wrappedBody;
 
     // Derive a palette from the post's own HTML so every product box adopts
     // the blog's brand color automatically. Safe-fail: undefined keeps defaults.
     const palette = extractPalette(htmlOnly.join('\n'));
-    return wrapWithProductBoxStyles(body, palette);
+    return wrapWithProductBoxStyles(wrappedBody, palette);
   }, [editorNodes, productMap, config.amazonTag]);
 
   const handlePush = useCallback(async () => {
