@@ -41,9 +41,6 @@ import {
   IntelligenceCache,
   generateProductBoxHtml,
   wrapWithProductBoxStyles,
-} from '../utils';
-import { extractPalette } from '../lib/html/palette';
-const _ignore_dup = () => {
   generateComparisonTableHtml,
   lookupAsin,
   hasProductLookup,
@@ -51,6 +48,7 @@ const _ignore_dup = () => {
   calculatePostPriority,
   sanitizeAppConfig,
 } from '../utils';
+import { extractPalette } from '../lib/html/palette';
 
 import { ProductBoxPreview } from './ProductBoxPreview';
 import { PremiumProductBox } from './PremiumProductBox';
