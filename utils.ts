@@ -903,12 +903,36 @@ const fetchWithTimeout = async (url: string, timeout: number, options: RequestIn
   }
 };
 
+// Edge function URL for server-side content proxying (avoids browser CORS + WebContainer restrictions)
+const CONTENT_PROXY_EDGE_FN = 'https://wybpgjcrmdcvnnltodgx.supabase.co/functions/v1/content-proxy';
+
+const isWebContainerHtml = (text: string) =>
+  text.includes('__sb_state') || text.includes('webcontainer@runtime') || text.includes('webcontainer@wc-api');
+
 export const fetchWithSmartProxy = async (url: string, options: { timeout?: number } = {}): Promise<string> => {
   const { timeout = 20000 } = options;
-  const sortedProxies = getSortedProxies();
   const errors: string[] = [];
 
-  // Try direct fetch first (for same-origin or CORS-enabled sites)
+  // 1. Try the Supabase Edge Function proxy first (works in WebContainer, no CORS issues)
+  try {
+    const response = await fetchWithTimeout(
+      `${CONTENT_PROXY_EDGE_FN}?url=${encodeURIComponent(url)}`,
+      timeout,
+      { headers: { 'Accept': 'text/html, text/xml, application/xml, */*' } }
+    );
+    if (response.ok) {
+      const text = await response.text();
+      if (text && text.length > 50 && !isWebContainerHtml(text)) {
+        return text;
+      }
+    } else {
+      errors.push(`edge-proxy: HTTP ${response.status}`);
+    }
+  } catch (e: any) {
+    errors.push(`edge-proxy: ${e.name === 'AbortError' ? 'Timeout' : e.message}`);
+  }
+
+  // 2. Try direct fetch (for CORS-enabled sites outside WebContainer)
   try {
     const response = await fetchWithTimeout(url, 8000, {
       headers: { 'Accept': 'text/xml, application/xml, text/html, */*' },
@@ -916,20 +940,20 @@ export const fetchWithSmartProxy = async (url: string, options: { timeout?: numb
     });
     if (response.ok) {
       const text = await response.text();
-      if (text && text.length > 50 && text.includes('<')) {
+      if (text && text.length > 50 && text.includes('<') && !isWebContainerHtml(text)) {
         return text;
       }
     }
-  } catch (e: any) {
-    // Direct fetch failed, will try proxies
+  } catch {
+    // Direct fetch failed, fall through to CORS proxies
   }
 
-  // Try each proxy
+  // 3. Try public CORS proxies as last resort
+  const sortedProxies = getSortedProxies();
   for (const proxy of sortedProxies) {
     const startTime = Date.now();
     try {
       const proxyUrl = proxy.transform(url);
-
       const response = await fetchWithTimeout(proxyUrl, proxy.timeout || timeout, {
         headers: { 'Accept': 'text/xml, application/xml, text/html, application/json, */*' },
       });
@@ -945,7 +969,7 @@ export const fetchWithSmartProxy = async (url: string, options: { timeout?: numb
         } catch {}
       }
 
-      if (!text || text.length < 50) throw new Error('Empty response');
+      if (!text || text.length < 50 || isWebContainerHtml(text)) throw new Error('Invalid response');
 
       const latency = Date.now() - startTime;
       proxyLatencyMap.set(proxy.name, latency);
@@ -961,7 +985,7 @@ export const fetchWithSmartProxy = async (url: string, options: { timeout?: numb
     }
   }
 
-  throw new Error(`All proxies failed: ${errors.join(', ')}`);
+  throw new Error(`Failed to fetch content: ${errors.join(', ')}`);
 };
 
 export const normalizeSitemapUrl = (input: string): string[] => {
