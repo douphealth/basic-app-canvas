@@ -25,12 +25,13 @@ export default defineConfig(({ mode, command }) => ({
     allowedHosts: true,
   },
   ssr:
-    command === 'build'
+    command === 'build' && mode !== 'development'
       ? {
-          // Bundle all dependencies only for the production worker build.
-          // Doing this in dev makes Vite try to evaluate CommonJS packages
-          // like React via the SSR module runner, which crashes with
-          // "ReferenceError: module is not defined".
+          // Bundle all dependencies only for the published worker build.
+          // Preview/dev builds can run with command="build" and
+          // mode="development"; applying this there makes Vite try to
+          // evaluate CommonJS packages like React via the SSR module runner,
+          // which prevents the preview from being built.
           noExternal: true,
         }
       : undefined,
